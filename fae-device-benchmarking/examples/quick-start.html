@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start - Face Benchmark</title>
+    
+    <!-- Import map to resolve MediaPipe dependency -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/+esm"
+        }
+    }
+    </script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            display: none;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Face Benchmark Quick Start</h1>
+        <p>Click the button below to run a quick device performance test.</p>
+        
+        <button id="runBtn" onclick="runQuickTest()">Run Quick Benchmark</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <script type="module">
+        import FaceBenchmark from 'https://cdn.jsdelivr.net/gh/privately-corp/web-utils@latest/fae-device-benchmarking/dists/v1.0.0/index.browser.js';
+        window.FaceBenchmark = FaceBenchmark;
+    </script>
+
+    <script>
+        async function runQuickTest() {
+            const btn = document.getElementById('runBtn');
+            const output = document.getElementById('output');
+            
+            btn.disabled = true;
+            output.style.display = 'block';
+            output.innerHTML = '<div class="loading">🔄 Initializing MediaPipe and running benchmark...</div>';
+            
+            try {
+                // Create and run benchmark
+                const benchmark = await window.FaceBenchmark.create();
+                const results = await benchmark.runQuickBenchmark(10);
+                
+                // Display results
+                output.innerHTML = `
+✅ Benchmark Complete!
+
+📱 Device Information:
+   Type: ${results.device.device.type}
+   OS: ${results.device.os.name} ${results.device.os.version}
+   Browser: ${results.device.browser.name} ${results.device.browser.version}
+   CPU Cores: ${results.device.device.cpuCores}
+   GPU: ${results.device.gpu.renderer}
+
+⏱️ Performance Metrics:
+   Mean Execution Time: ${results.benchmark.meanTime.toFixed(2)}ms
+   Median Time: ${results.benchmark.medianTime.toFixed(2)}ms
+   Min Time: ${results.benchmark.minTime.toFixed(2)}ms
+   Max Time: ${results.benchmark.maxTime.toFixed(2)}ms
+   Setup Time: ${results.setup.totalSetupTime.toFixed(2)}ms
+
+🏆 Classification:
+   Category: ${results.classification.category.toUpperCase()}
+   Recommendation: ${results.classification.recommendation.toUpperCase()}
+   Performance Score: ${results.classification.performanceScore.toFixed(1)}/100
+   
+   ${results.classification.description}
+                `;
+                
+                // Change output color based on classification
+                const colors = {
+                    'high-end': '#4CAF50',
+                    'medium-end': '#FF9800',
+                    'low-end': '#F44336'
+                };
+                output.style.borderLeftColor = colors[results.classification.category];
+                
+                // Cleanup
+                benchmark.dispose();
+                
+            } catch (error) {
+                output.innerHTML = `❌ Error: ${error.message}`;
+                output.style.borderLeftColor = '#F44336';
+                console.error('Benchmark failed:', error);
+            }
+            
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
+

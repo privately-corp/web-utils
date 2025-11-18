@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Benchmark - Basic Usage Example</title>
+    
+    <!-- Import map to resolve MediaPipe dependency -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/+esm"
+        }
+    }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .loading {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #28a745;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #dc3545;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        .result-section {
+            margin: 15px 0;
+        }
+        .result-section h3 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        .result-item {
+            padding: 5px 0;
+            color: #666;
+        }
+        .classification {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .high-end {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .medium-end {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .low-end {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        pre {
+            background-color: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 MediaPipe Face Benchmark Demo</h1>
+        
+        <p>This example demonstrates how to use the <strong>@privately-corp/fae-device-benchmarking</strong> SDK to test your device's performance for face landmark detection.</p>
+        
+        <div>
+            <button id="runBenchmark" onclick="runBenchmark()">Run Benchmark</button>
+            <button id="runQuick" onclick="runQuickBenchmark()">Run Quick Benchmark (Default Image)</button>
+            <button id="exportJson" onclick="exportResults()" disabled>Export Results as JSON</button>
+        </div>
+        
+        <div id="status"></div>
+        <div id="results"></div>
+    </div>
+
+    <!-- Include the SDK - adjust path based on your setup -->
+    <script type="module">
+        import FaceBenchmark from 'https://cdn.jsdelivr.net/gh/privately-corp/web-utils@latest/fae-device-benchmarking/dists/v1.0.0/index.browser.js';
+        
+        // Make it globally available for the onclick handlers
+        window.FaceBenchmark = FaceBenchmark;
+        window.benchmarkInstance = null;
+        window.benchmarkResults = null;
+    </script>
+
+    <script>
+        function showStatus(message, type = 'loading') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+            statusDiv.style.display = 'block';
+        }
+
+        function hideStatus() {
+            document.getElementById('status').style.display = 'none';
+        }
+
+        function displayResults(results) {
+            window.benchmarkResults = results;
+            document.getElementById('exportJson').disabled = false;
+
+            const resultsDiv = document.getElementById('results');
+            
+            const classificationClass = results.classification.category.replace('-', '');
+            
+            resultsDiv.innerHTML = `
+                <h2>Benchmark Results</h2>
+                
+                <div class="result-section">
+                    <h3>📱 Device Information</h3>
+                    <div class="result-item"><strong>Type:</strong> ${results.device.device.type}</div>
+                    <div class="result-item"><strong>OS:</strong> ${results.device.os.name} ${results.device.os.version}</div>
+                    <div class="result-item"><strong>Browser:</strong> ${results.device.browser.name} ${results.device.browser.version}</div>
+                    <div class="result-item"><strong>CPU Cores:</strong> ${results.device.device.cpuCores}</div>
+                    <div class="result-item"><strong>GPU:</strong> ${results.device.gpu.renderer}</div>
+                </div>
+
+                <div class="result-section">
+                    <h3>⏱️ Setup Performance</h3>
+                    <div class="result-item"><strong>Download Time:</strong> ${results.setup.downloadTime.toFixed(2)}ms</div>
+                    <div class="result-item"><strong>Initialization Time:</strong> ${results.setup.initTime.toFixed(2)}ms</div>
+                    <div class="result-item"><strong>Total Setup Time:</strong> ${results.setup.totalSetupTime.toFixed(2)}ms</div>
+                </div>
+
+                <div class="result-section">
+                    <h3>🎯 Benchmark Performance</h3>
+                    <div class="result-item"><strong>Iterations:</strong> ${results.benchmark.iterations}</div>
+                    <div class="result-item"><strong>Mean Time:</strong> ${results.benchmark.meanTime.toFixed(2)}ms</div>
+                    <div class="result-item"><strong>Median Time:</strong> ${results.benchmark.medianTime.toFixed(2)}ms</div>
+                    <div class="result-item"><strong>Min Time:</strong> ${results.benchmark.minTime.toFixed(2)}ms</div>
+                    <div class="result-item"><strong>Max Time:</strong> ${results.benchmark.maxTime.toFixed(2)}ms</div>
+                    <div class="result-item"><strong>Standard Deviation:</strong> ${results.benchmark.standardDeviation.toFixed(2)}ms</div>
+                </div>
+
+                <div class="result-section">
+                    <h3>🏆 Device Classification</h3>
+                    <div class="classification ${classificationClass}">
+                        ${results.classification.category.toUpperCase()} (${results.classification.recommendation.toUpperCase()})
+                    </div>
+                    <div class="result-item"><strong>Performance Score:</strong> ${results.classification.performanceScore.toFixed(1)}/100</div>
+                    <div class="result-item">${results.classification.description}</div>
+                </div>
+            `;
+
+            showStatus('Benchmark completed successfully!', 'success');
+        }
+
+        async function runQuickBenchmark() {
+            try {
+                const button = document.getElementById('runQuick');
+                button.disabled = true;
+                document.getElementById('results').innerHTML = '';
+                
+                showStatus('Initializing MediaPipe Face Landmarker...', 'loading');
+                
+                // Create and initialize the benchmark instance
+                if (!window.benchmarkInstance) {
+                    window.benchmarkInstance = new window.FaceBenchmark();
+                    await window.benchmarkInstance.initialize();
+                }
+                
+                showStatus('Running benchmark with default test image...', 'loading');
+                
+                // Run the quick benchmark
+                const results = await window.benchmarkInstance.runQuickBenchmark(10);
+                
+                displayResults(results);
+                
+                button.disabled = false;
+            } catch (error) {
+                console.error('Benchmark failed:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+                document.getElementById('runQuick').disabled = false;
+            }
+        }
+
+        async function runBenchmark() {
+            try {
+                const button = document.getElementById('runBenchmark');
+                button.disabled = true;
+                document.getElementById('results').innerHTML = '';
+                
+                // Let user select an image
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) {
+                        button.disabled = false;
+                        return;
+                    }
+                    
+                    showStatus('Loading image...', 'loading');
+                    
+                    const img = new Image();
+                    img.src = URL.createObjectURL(file);
+                    
+                    img.onload = async () => {
+                        try {
+                            showStatus('Initializing MediaPipe Face Landmarker...', 'loading');
+                            
+                            // Create and initialize the benchmark instance
+                            if (!window.benchmarkInstance) {
+                                window.benchmarkInstance = new window.FaceBenchmark();
+                                await window.benchmarkInstance.initialize();
+                            }
+                            
+                            showStatus('Running benchmark on your image...', 'loading');
+                            
+                            // Run the benchmark
+                            const results = await window.benchmarkInstance.runBenchmark(img, 10);
+                            
+                            displayResults(results);
+                            
+                            button.disabled = false;
+                        } catch (error) {
+                            console.error('Benchmark failed:', error);
+                            showStatus(`Error: ${error.message}`, 'error');
+                            button.disabled = false;
+                        }
+                    };
+                    
+                    img.onerror = () => {
+                        showStatus('Failed to load image', 'error');
+                        button.disabled = false;
+                    };
+                };
+                
+                input.click();
+                
+            } catch (error) {
+                console.error('Benchmark failed:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+                document.getElementById('runBenchmark').disabled = false;
+            }
+        }
+
+        function exportResults() {
+            if (!window.benchmarkResults) {
+                alert('No results to export');
+                return;
+            }
+
+            const json = window.FaceBenchmark.exportJSON(window.benchmarkResults);
+            
+            // Create a download link
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `face-benchmark-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
+
